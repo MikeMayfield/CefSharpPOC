@@ -1,16 +1,23 @@
 ﻿// Copyright © 2010-2015 The CefSharp Authors. All rights reserved.
-//
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-using CefSharp.DevTools.IO;
 using CefSharp.MinimalExample.WinForms.Controls;
 using CefSharp.WinForms;
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Titanium.Web.Proxy.Models;
+using Titanium.Web.Proxy;
+using Titanium.Web.Proxy.EventArguments;
+using System.Runtime.Remoting.Messaging;
+using System.Collections.Generic;
 
 namespace CefSharp.MinimalExample.WinForms
 {
+    //Useful links:
+    //  https://github.com/cefsharp/CefSharp.Dom  //Manipulate DOM directly, including clicking on buttons
+    //  https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelector  //Query selector docs
+
     public partial class BrowserForm : Form
     {
 #if DEBUG
@@ -20,6 +27,7 @@ namespace CefSharp.MinimalExample.WinForms
 #endif
         private readonly string title = "CefSharp.MinimalExample.WinForms (" + Build + ")";
         private readonly ChromiumWebBrowser browser;
+        private readonly ListBox outputListBox;
 
         public BrowserForm()
         {
@@ -28,7 +36,7 @@ namespace CefSharp.MinimalExample.WinForms
             Text = title;
             WindowState = FormWindowState.Maximized;
 
-            browser = new ChromiumWebBrowser("www.google.com");
+            browser = new ChromiumWebBrowser("https://www.peacocktv.com");
             toolStripContainer.ContentPanel.Controls.Add(browser);
 
             browser.IsBrowserInitializedChanged += OnIsBrowserInitializedChanged;
@@ -38,6 +46,9 @@ namespace CefSharp.MinimalExample.WinForms
             browser.TitleChanged += OnBrowserTitleChanged;
             browser.AddressChanged += OnBrowserAddressChanged;
             browser.LoadError += OnBrowserLoadError;
+            browser.FrameLoadStart += OnFrameLoadStart;
+            browser.FrameLoadEnd += OnFrameLoadEnd;
+            //browser.RequestHandler = new CustomRequestHandler();        
 
             var version = string.Format("Chromium: {0}, CEF: {1}, CefSharp: {2}",
                Cef.ChromiumVersion, Cef.CefVersion, Cef.CefSharpVersion);
@@ -54,6 +65,25 @@ namespace CefSharp.MinimalExample.WinForms
 #endif
 
             DisplayOutput(string.Format("{0}, {1}", version, environment));
+
+            // Initialize the ListBox control
+            outputListBox = new ListBox
+            {
+                Dock = DockStyle.Bottom,
+                Height = 800,
+                HorizontalScrollbar = true
+            };
+            Controls.Add(outputListBox);
+        }
+
+        private void OnFrameLoadStart(object sender, FrameLoadStartEventArgs args)
+        {
+            DisplayOutput(string.Format("FrameStart - ID: {0} {1} - {2}", args.Frame.Identifier, args.Url, args.Frame.Name));
+        }
+
+        private void OnFrameLoadEnd(object sender, FrameLoadEndEventArgs args)
+        {
+            DisplayOutput(string.Format("FrameEnd - ID: {0} {1} - {2}", args.Frame.Identifier, args.Url, args.Frame.Name));
         }
 
         private void OnBrowserLoadError(object sender, LoadErrorEventArgs e)
@@ -83,7 +113,7 @@ namespace CefSharp.MinimalExample.WinForms
 
         private void OnBrowserConsoleMessage(object sender, ConsoleMessageEventArgs args)
         {
-            DisplayOutput(string.Format("Line: {0}, Source: {1}, Message: {2}", args.Line, args.Source, args.Message));
+            DisplayOutput(string.Format("Message at line: {0}, Source: {1}, Message: {2}", args.Line, args.Source, args.Message));
         }
 
         private void OnBrowserStatusMessage(object sender, StatusMessageEventArgs args)
@@ -133,7 +163,17 @@ namespace CefSharp.MinimalExample.WinForms
 
         public void DisplayOutput(string output)
         {
-            this.InvokeOnUiThreadIfRequired(() => outputLabel.Text = output);
+            this.InvokeOnUiThreadIfRequired(() => AddOutputToList(output));
+        }
+
+        private void AddOutputToList(string output)
+        {
+            var itemCnt = outputListBox.Items.Count;
+            if (itemCnt > 250)
+            {
+                outputListBox.Items.RemoveAt(itemCnt - 1);
+            }
+            outputListBox.Items.Insert(0, DateTime.Now.ToString("HH:mm:ss.ff") + " " + output);
         }
 
         private void HandleToolStripLayout(object sender, LayoutEventArgs e)

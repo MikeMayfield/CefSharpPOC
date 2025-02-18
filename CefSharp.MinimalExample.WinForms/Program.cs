@@ -19,11 +19,11 @@ namespace CefSharp.MinimalExample.WinForms
             CefRuntime.SubscribeAnyCpuAssemblyResolver();
 #endif
 
-            var settings = new CefSettings()
-            {
-                //By default CefSharp will use an in-memory cache, you need to specify a Cache Folder to persist data
-                CachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CefSharp\\Cache")
-            };
+            var settings = new CefSettings();
+            //{
+            //    //By default CefSharp will use an in-memory cache, you need to specify a Cache Folder to persist data
+            //    CachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CefSharp\\Cache")
+            //};
 
             //Example of setting a command line argument
             //Enables WebRTC
@@ -36,6 +36,9 @@ namespace CefSharp.MinimalExample.WinForms
             settings.CefCommandLineArgs.Add("use-fake-ui-for-media-stream");
             //For screen sharing add (see https://bitbucket.org/chromiumembedded/cef/issues/2582/allow-run-time-handling-of-media-access#comment-58677180)
             settings.CefCommandLineArgs.Add("enable-usermedia-screen-capturing");
+            settings.CefCommandLineArgs.Add("disable-plugins-discovery", "1"); //Disable discovering third-party plugins. Effectively loading only ones shipped with the browser plus third-party ones as specified by --extra-plugin-dir and --load-plugin switches
+            settings.CefCommandLineArgs.Add("allow-running-insecure-content", "1"); //By default, an https page cannot run JavaScript, CSS or plugins from http URLs. This provides an override to get the old insecure behavior. Only available in 47 and above.
+            settings.CefCommandLineArgs.Add("disable-extensions", "1"); //Extension support can be disabled
 
             //Perform dependency check to make sure all relevant resources are in our output directory.
             var initialized = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
